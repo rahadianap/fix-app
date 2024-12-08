@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ interface ModalProps {
   onSubmit: (data: any) => void;
   initialData?: any;
   isCreating: boolean;
+  isViewing?: boolean;
+  isLoading: boolean;
 }
 
 export function Modal({
@@ -24,6 +27,8 @@ export function Modal({
   onSubmit,
   initialData,
   isCreating,
+  isViewing,
+  isLoading,
 }: ModalProps) {
   const [formData, setFormData] = useState(
     initialData || { nama_kategori: "" }
@@ -52,13 +57,17 @@ export function Modal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isCreating ? "Create New Item" : "Edit Item"}
+            {isViewing
+              ? "View Item"
+              : isCreating
+              ? "Create New Item"
+              : "Edit Item"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nama_kategori" className="text-right">
+              <Label htmlFor="name" className="text-right">
                 Nama Kategori
               </Label>
               <Input
@@ -67,11 +76,27 @@ export function Modal({
                 value={formData.nama_kategori}
                 onChange={handleChange}
                 className="col-span-3"
+                readOnly={isViewing}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">{isCreating ? "Create" : "Update"}</Button>
+            {!isViewing && (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <span className="mr-2">
+                      {isCreating ? "Creating..." : "Updating..."}
+                    </span>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  </>
+                ) : isCreating ? (
+                  "Create"
+                ) : (
+                  "Update"
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

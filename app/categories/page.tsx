@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import NavBar from "@/components/navbar";
 import Table from "@/components/table";
-import { Modal } from "@/components/modal";
+import { Modal } from "@/app/categories/components/modal";
 
 interface Category {
   id: number;
@@ -27,15 +27,15 @@ interface PaginatedResponse {
 
 const Categories = () => {
   const [category, setCategory] = useState<Category[]>([]);
-  const [setFilteredCategory] = useState<Category[]>([]);
   const [error, setError] = useState("");
-  const [search] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Category | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const token = Cookies.get("token");
   const router = useRouter();
@@ -80,12 +80,14 @@ const Categories = () => {
   const handleView = (item: Category) => {
     setSelectedItem(item);
     setIsCreating(false);
+    setIsViewing(true);
     setIsModalOpen(true);
   };
 
   const handleEdit = (item: Category) => {
     setSelectedItem(item);
     setIsCreating(false);
+    setIsViewing(false);
     setIsModalOpen(true);
   };
 
@@ -114,13 +116,18 @@ const Categories = () => {
   const handleCreateNew = () => {
     setSelectedItem(null);
     setIsCreating(true);
+    setIsViewing(false);
     setIsModalOpen(true);
   };
 
   const handleModalSubmit = async (data: Category) => {
+    setIsSubmitting(true);
     try {
       if (isCreating) {
-        await axios.post("https://your-laravel-api.com/items", data);
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BACKEND}/api/categories`,
+          data
+        );
         Swal.fire({
           title: "Yeay!",
           text: "Your work has been saved!",
@@ -129,7 +136,7 @@ const Categories = () => {
         });
       } else {
         await axios.put(
-          `https://your-laravel-api.com/items/${selectedItem?.id}`,
+          `${process.env.NEXT_PUBLIC_API_BACKEND}/api/categories/${selectedItem?.id}`,
           data
         );
         Swal.fire({
@@ -143,11 +150,13 @@ const Categories = () => {
       fetchCategories(currentPage);
     } catch (error) {
       Swal.fire({
-        title: "Yeay!",
-        text: "Your work has been saved!",
-        icon: "success",
+        title: "Oops!",
+        text: "Something went wrong!",
+        icon: "error",
         showCloseButton: true,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -157,71 +166,6 @@ const Categories = () => {
     }
     fetchCategories(currentPage);
   }, [currentPage]);
-
-  async function createData(
-    formData: FormData
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const nama_kategori = formData.get("nama_kategori") as string;
-
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BACKEND}/api/categories`,
-        {
-          nama_kategori,
-        }
-      );
-
-      if (response.status !== 201) {
-        throw new Error("Failed to create data");
-      }
-      return { success: true, message: "Data created successfully" };
-    } catch (error) {
-      console.error("Error creating data:", error);
-      return { success: false, message: "Failed to create data" };
-    }
-  }
-
-  async function editData(
-    id: number,
-    formData: FormData
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const nama_kategori = formData.get("nama_kategori") as string;
-
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_BACKEND}/api/categories/${id}`,
-        {
-          nama_kategori,
-        }
-      );
-
-      if (response.status !== 200) {
-        throw new Error("Failed to edit data");
-      }
-      return { success: true, message: "Data updated successfully" };
-    } catch (error) {
-      console.error("Error editing data:", error);
-      return { success: false, message: "Failed to edit data" };
-    }
-  }
-
-  async function deleteData(
-    id: number
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_BACKEND}/api/categories/${id}`
-      );
-
-      if (response.status !== 200) {
-        throw new Error("Failed to delete data");
-      }
-      return { success: true, message: "Data deleted successfully" };
-    } catch (error) {
-      console.error("Error deleting data:", error);
-      return { success: false, message: "Failed to delete data" };
-    }
-  }
 
   if (error) return <div>{error}</div>;
 
@@ -263,6 +207,8 @@ const Categories = () => {
             onSubmit={handleModalSubmit}
             initialData={selectedItem}
             isCreating={isCreating}
+            isViewing={isViewing}
+            isLoading={isSubmitting}
           />
         </div>
       </main>

@@ -9,8 +9,18 @@ import {
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Trash, Loader2 } from "lucide-react";
 import { SkeletonRow } from "./skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TableProps<T> {
   data: T[];
@@ -41,6 +51,8 @@ function Table<T extends { id: string | number }>({
   isLoading = false,
 }: TableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<T | null>(null);
 
   const filteredData = useMemo(() => {
     return data.filter((item) =>
@@ -51,6 +63,20 @@ function Table<T extends { id: string | number }>({
       )
     );
   }, [data, columns, searchTerm]);
+
+  const handleDeleteClick = (item: T) => {
+    setItemToDelete(item);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    isLoading = true;
+    if (itemToDelete && onDelete) {
+      onDelete(itemToDelete);
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -133,7 +159,7 @@ function Table<T extends { id: string | number }>({
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => onDelete(item)}
+                          onClick={() => handleDeleteClick(item)}
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -182,6 +208,37 @@ function Table<T extends { id: string | number }>({
           </PaginationItem>
         </PaginationContent>
       </Pagination>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-black">
+              This action cannot be undone. This will permanently delete the
+              item "{itemToDelete ? String(itemToDelete[columns[1].key]) : ""}"
+              and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-700"
+              onClick={handleDeleteConfirm}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
