@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { SkeletonRow } from "./skeleton";
 import {
   AlertDialog,
@@ -22,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface TableProps<T> {
+interface TableWithPageNavigationProps<T> {
   data: T[];
   columns: {
     key: keyof T;
@@ -31,25 +32,23 @@ interface TableProps<T> {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  onView?: (item: T) => void;
-  onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
-  onCreateNew?: () => void;
   isLoading?: boolean;
+  renderCreateButton: () => React.ReactNode;
+  renderActions: (item: T) => React.ReactNode;
 }
 
-function Table<T extends { id: string | number }>({
+function Table2<T extends { id: string | number }>({
   data,
   columns,
   currentPage,
   totalPages,
   onPageChange,
-  onView,
-  onEdit,
   onDelete,
-  onCreateNew,
   isLoading = false,
-}: TableProps<T>) {
+  renderCreateButton,
+  renderActions,
+}: TableWithPageNavigationProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<T | null>(null);
@@ -70,7 +69,6 @@ function Table<T extends { id: string | number }>({
   };
 
   const handleDeleteConfirm = () => {
-    isLoading = true;
     if (itemToDelete && onDelete) {
       onDelete(itemToDelete);
       setIsDeleteDialogOpen(false);
@@ -84,24 +82,17 @@ function Table<T extends { id: string | number }>({
         <div className="flex items-center space-x-2">
           <Input
             type="text"
-            placeholder="Search nama kategori..."
+            placeholder="Search nama barang..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-72"
+            className="max-w-sm"
           />
         </div>
-        {onCreateNew && (
-          <Button
-            onClick={onCreateNew}
-            className="bg-gray-500 hover:bg-gray-700"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Create New Data
-          </Button>
-        )}
+        {renderCreateButton()}
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full text-sm text-left text-black">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-200">
+        <table className="w-full text-sm text-left text-gray-500">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
             <tr>
               {columns.map((column) => (
                 <th
@@ -138,26 +129,7 @@ function Table<T extends { id: string | number }>({
                   ))}
                   <td className="px-6 py-4 flex justify-end">
                     <div className="flex space-x-2">
-                      {onView && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => onView(item)}
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {onEdit && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => onEdit(item)}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {renderActions(item)}
                       {onDelete && (
                         <Button
                           variant="outline"
@@ -165,7 +137,20 @@ function Table<T extends { id: string | number }>({
                           onClick={() => handleDeleteClick(item)}
                           title="Delete"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                            />
+                          </svg>
                         </Button>
                       )}
                     </div>
@@ -193,16 +178,35 @@ function Table<T extends { id: string | number }>({
               disabled={currentPage === 1}
             />
           </PaginationItem>
-          {[...Array(totalPages)].map((_, index) => (
-            <PaginationItem key={index}>
-              <PaginationLink
-                onClick={() => onPageChange(index + 1)}
-                isActive={currentPage === index + 1}
-              >
-                {index + 1}
-              </PaginationLink>
-            </PaginationItem>
-          ))}
+          {[...Array(totalPages)].map((_, index) => {
+            const pageNumber = index + 1;
+            if (
+              pageNumber === 1 ||
+              pageNumber === totalPages ||
+              (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+            ) {
+              return (
+                <PaginationItem key={index}>
+                  <PaginationLink
+                    onClick={() => onPageChange(pageNumber)}
+                    isActive={currentPage === pageNumber}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            } else if (
+              pageNumber === currentPage - 2 ||
+              pageNumber === currentPage + 2
+            ) {
+              return (
+                <PaginationItem key={index}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              );
+            }
+            return null;
+          })}
           <PaginationItem>
             <PaginationNext
               onClick={() => onPageChange(currentPage + 1)}
@@ -218,26 +222,32 @@ function Table<T extends { id: string | number }>({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 text-destructive"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                />
+              </svg>
               Are you absolutely sure?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-black">
+            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              item "{itemToDelete ? String(itemToDelete[columns[1].key]) : ""}"
+              item "{itemToDelete ? String(itemToDelete[columns[0].key]) : ""}"
               and remove it from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-700"
-              onClick={handleDeleteConfirm}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                "Delete"
-              )}
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -246,4 +256,4 @@ function Table<T extends { id: string | number }>({
   );
 }
 
-export default Table;
+export default Table2;

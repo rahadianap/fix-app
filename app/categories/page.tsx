@@ -172,7 +172,7 @@ const Categories = () => {
   const logoutHandler = async () => {
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     await axios
-      .post(`${process.env.NEXT_PUBLIC_API_BACKEND}/api/logout`)
+      .post(`${process.env.NEXT_PUBLIC_API_BACKEND}/logout`)
       .then(() => {
         Cookies.remove("token");
         router.push("/");
